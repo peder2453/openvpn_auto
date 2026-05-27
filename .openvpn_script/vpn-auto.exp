@@ -2,9 +2,9 @@
 
 puts "================================================================================================"
 #锁屏密码
-set passwordcom ""
+set passwordcom "loading"
 #OPT密钥
-set otp_secret ""
+set otp_secret "54KAQBZQTOESRCWV"
 
 if {$argc == 0} {
     puts "usage: connect | disconnect"
