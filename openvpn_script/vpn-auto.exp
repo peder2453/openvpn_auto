@@ -56,7 +56,6 @@ set code [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]
 spawn sudo /opt/homebrew/sbin/openvpn \
     --config $config \
     --auth-user-pass $auth \
-    --daemon \
     --writepid $pid \
     --log-append $log
 
