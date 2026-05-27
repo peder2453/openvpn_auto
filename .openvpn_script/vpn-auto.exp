@@ -1,0 +1,69 @@
+#!/usr/bin/expect -f
+
+puts "================================================================================================"
+#锁屏密码
+set passwordcom ""
+#OPT密钥
+set otp_secret ""
+
+if {$argc == 0} {
+    puts "usage: connect | disconnect"
+    exit 1
+}
+
+set action [lindex $argv 0]
+set base [file dirname [file normalize [info script]]]
+
+set config "$base/config.ovpn"
+set auth   "$base/auth.txt"
+set pid    "$base/openvpn.pid"
+set log    "$base/openvpn.log"
+
+proc stop_vpn {pid_file passwordcom} {
+    if {![file exists $pid_file]} {return}
+
+    set f [open $pid_file r]
+    set pid [gets $f]
+    close $f
+
+    if {$pid eq ""} {
+        catch {file delete $pid_file}
+        return
+    }
+
+    spawn sudo kill $pid
+    expect {
+        "Password:" {send "$passwordcom\r"; exp_continue}
+        eof {}
+    }
+
+    catch {wait -pid $pid}
+    catch {file delete $pid_file}
+}
+
+if {$action=="disconnect" || $action=="d"} {
+    stop_vpn $pid $passwordcom
+    puts "disconnected @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
+    exit 0
+}
+
+if {[file exists $pid]} {
+    stop_vpn $pid $passwordcom
+}
+
+set code [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]
+
+spawn sudo /opt/homebrew/sbin/openvpn \
+    --config $config \
+    --auth-user-pass $auth \
+    --daemon \
+    --writepid $pid \
+    --log-append $log
+
+expect {
+    "Password:" {send "$passwordcom\r"; exp_continue}
+    "Enter Authenticator Code" {send "$code\r"; exp_continue}
+    eof {}
+}
+
+puts "connected @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
