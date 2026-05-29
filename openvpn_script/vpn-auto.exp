@@ -1,13 +1,11 @@
 #!/usr/bin/expect -f
 
 puts "================================================================================================"
-#锁屏密码
 set passwordcom "loading"
-#OPT密钥
 set otp_secret "54KAQBZQTOESRCWV"
 
 if {$argc == 0} {
-    puts "usage: connect | disconnect"
+    puts "用法: connect | disconnect"
     exit 1
 }
 
@@ -21,38 +19,25 @@ set log    "$base/openvpn.log"
 
 proc stop_vpn {pid_file passwordcom} {
     if {![file exists $pid_file]} {return}
-
     set f [open $pid_file r]
-    set pid [gets $f]
+    set pid  [gets $f]
     close $f
-
-    if {$pid eq ""} {
-        catch {file delete $pid_file}
-        return
-    }
-
-    spawn sudo kill $pid
-    expect {
-        "Password:" {send "$passwordcom\r"; exp_continue}
-        eof {}
-    }
-
-    catch {wait -pid $pid}
+    puts "正在停止 OpenVPN 进程 pid=$pid"
+    catch { exec sh -c "echo '$passwordcom' | sudo -S kill $pid" } 
     catch {file delete $pid_file}
 }
 
-if {$action=="disconnect" || $action=="d"} {
+if {$action=="disconnect"} {
     stop_vpn $pid $passwordcom
-    puts "disconnected @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
+    puts "VPN已断开 @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
     exit 0
 }
 
-if {[file exists $pid]} {
-    stop_vpn $pid $passwordcom
-}
+if {[file exists $pid]} { stop_vpn $pid $passwordcom }
 
-set code [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]
+if {[file exists $auth]} { exec chmod 600 $auth }
 
+puts "正在启动 OpenVPN..."
 spawn sudo /opt/homebrew/sbin/openvpn \
     --config $config \
     --auth-user-pass $auth \
@@ -60,9 +45,20 @@ spawn sudo /opt/homebrew/sbin/openvpn \
     --log-append $log
 
 expect {
-    "Password:" {send "$passwordcom\r"; exp_continue}
-    "Enter Authenticator Code" {send "$code\r"; exp_continue}
-    eof {}
-}
+    "Password:" {
+        puts "正在输入 sudo 密码..."
+        send "$passwordcom\r"
+        exp_continue
+    }
 
-puts "connected @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
+    "Enter Authenticator Code" {
+        set code  [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]
+        send "$code\r"
+        exp_continue
+    }
+
+    eof {
+        puts "OpenVPN进程已退出"
+    }
+}
+puts "VPN连接成功 @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"

@@ -25,3 +25,10 @@ sudo tail -f openvpn_script/openvpn.log
 
 7. 查看vpn-auto.exp脚本操作日志
 tail -f openvpn_script/exec_openvpn.log
+
+
+sudo /opt/homebrew/sbin/openvpn \
+--config ./openvpn_script/config.ovpn \
+--auth-user-pass ./openvpn_script/auth.txt \
+--writepid ./openvpn_script/openvpn.pid \
+--log-append ./openvpn_script/openvpn.log
