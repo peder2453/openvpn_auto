@@ -37,6 +37,10 @@ if {[file exists $pid]} { stop_vpn $pid $passwordcom }
 
 if {[file exists $auth]} { exec chmod 600 $auth }
 
+proc get_otp {otp_secret} {
+    return [string trim [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]]
+}
+
 puts "正在启动 OpenVPN..."
 spawn sudo /opt/homebrew/sbin/openvpn \
     --config $config \
@@ -52,8 +56,7 @@ expect {
     }
 
     "Enter Authenticator Code" {
-        set code  [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]
-        send "$code\r"
+        send "[get_otp $otp_secret]\r"
         exp_continue
     }
 
@@ -61,4 +64,4 @@ expect {
         puts "OpenVPN进程已退出"
     }
 }
-puts "VPN连接成功 @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
+puts "VPN连接脚本启动成功 @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"

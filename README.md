@@ -32,3 +32,13 @@ sudo /opt/homebrew/sbin/openvpn \
 --auth-user-pass ./openvpn_script/auth.txt \
 --writepid ./openvpn_script/openvpn.pid \
 --log-append ./openvpn_script/openvpn.log
+
+文件被Gatekeeper隔离的问题
+xattr -d com.apple.quarantine /Users/admin/Documents/openvpn_auto-main/openvpn_script/vpn-auto.exp
+
+
+/opt/homebrew/sbin/openvpn \
+--config ./config.ovpn \
+--auth-user-pass ./openvpn_script/auth.txt \
+--writepid ./openvpn.pid \
+--log-append ./openvpn.log
