@@ -4,6 +4,8 @@ puts "==========================================================================
 set passwordcom "loading"
 set otp_secret "54KAQBZQTOESRCWV"
 
+set timeout -1
+
 if {$argc == 0} {
     puts "用法: connect | disconnect"
     exit 1
@@ -41,7 +43,7 @@ proc get_otp {otp_secret} {
     return [string trim [exec /opt/homebrew/bin/oathtool --totp -b $otp_secret]]
 }
 
-puts "正在启动 OpenVPN..."
+puts "OpenVPN已启动，开始监听认证请求..."
 spawn sudo /opt/homebrew/sbin/openvpn \
     --config $config \
     --auth-user-pass $auth \
@@ -57,11 +59,15 @@ expect {
 
     "Enter Authenticator Code" {
         send "[get_otp $otp_secret]\r"
+        puts "OTP已提交 @[clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S}]"
         exp_continue
     }
 
     eof {
-        puts "OpenVPN进程已退出"
+        puts "OpenVPN进程退出 @[clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S}]"
+    }
+
+    timeout {
+        puts "监听超时 @[clock format [clock seconds] -format {%Y-%m-%d %H:%M:%S}]"
     }
 }
-puts "VPN连接脚本启动成功 @[clock format [clock seconds] -format "%Y-%m-%d %H:%M:%S"]"
